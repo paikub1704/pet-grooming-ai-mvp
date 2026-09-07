@@ -3,343 +3,788 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ปลดหนี้ ด้วย AI — Dashboard</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<title>ห้องทดลอง AI Automation · แฮปปี้เฟอร์ เพ็ทกรูมมิ่ง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --ink:#1B2B22;
+    --ink-soft:#4C5C51;
+    --bg:#F3F6EF;
+    --panel:#FFFFFF;
+    --brand:#2F6F4E;
+    --brand-dark:#1F4E37;
+    --accent:#F2A65A;
+    --accent-soft:#FCE6C9;
+    --bubble-bot:#FFFFFF;
+    --bubble-user:#F2A65A;
+    --line:#DFE7D6;
+    --danger:#C24949;
+    --danger-soft:#F8E1E1;
+    --radius-lg:22px;
+    --radius-md:16px;
+    --radius-sm:10px;
+    --shadow: 0 10px 30px -14px rgba(31,78,55,.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 8% 12%, rgba(47,111,78,.06), transparent 40%),
+      radial-gradient(circle at 92% 85%, rgba(242,166,90,.10), transparent 45%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Plus Jakarta Sans', sans-serif;
+    min-height:100vh;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
 
-  :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f4f3ee;
-    --bg-page: #eeede8;
-    --text-primary: #1a1a18;
-    --text-secondary: #5f5e5a;
-    --text-hint: #888780;
-    --border: rgba(0,0,0,0.12);
-    --border-hover: rgba(0,0,0,0.28);
-    --radius-md: 8px;
-    --radius-lg: 12px;
+  header.top{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+    margin-bottom:22px; flex-wrap:wrap;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--brand); font-weight:500; margin-bottom:6px; display:block;
+  }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-size:clamp(24px,3.4vw,34px);
+    margin:0; letter-spacing:-.01em; color:var(--ink);
+  }
+  h1 span{color:var(--brand);}
+  .sub{color:var(--ink-soft); font-size:14.5px; margin-top:6px; max-width:540px; line-height:1.55;}
+  .reset-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; background:var(--panel);
+    border:1px solid var(--line); color:var(--ink-soft); padding:10px 16px; border-radius:100px;
+    cursor:pointer; transition:.18s; white-space:nowrap;
+  }
+  .reset-btn:hover{border-color:var(--brand); color:var(--brand); box-shadow:var(--shadow);}
+
+  .grid{
+    display:grid; grid-template-columns: 372px 1fr; gap:22px; align-items:start;
+  }
+  @media (max-width: 880px){ .grid{grid-template-columns: 1fr;} }
+
+  .card{
+    background:var(--panel); border-radius:var(--radius-lg); border:1px solid var(--line);
+    box-shadow:var(--shadow);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg-primary: #1e1e1c;
-      --bg-secondary: #2a2a27;
-      --bg-page: #141412;
-      --text-primary: #f0ede4;
-      --text-secondary: #b4b2a9;
-      --text-hint: #888780;
-      --border: rgba(255,255,255,0.12);
-      --border-hover: rgba(255,255,255,0.28);
-    }
+  .phone{ padding:14px 14px 16px; position:relative; }
+  .phone-head{ display:flex; align-items:center; gap:10px; padding:8px 8px 14px; border-bottom:1px solid var(--line); }
+  .avatar{
+    width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg, var(--brand), #4a9873);
+    display:flex; align-items:center; justify-content:center; font-size:18px; flex:none;
+  }
+  .phone-head .info b{display:block; font-size:14.5px;}
+  .phone-head .info small{color:var(--ink-soft); font-size:11.5px;}
+  .dot-online{width:7px;height:7px;border-radius:50%;background:#3FB27F; display:inline-block; margin-right:5px;}
+
+  .chat-log{
+    height:460px; overflow-y:auto; padding:16px 6px 8px; display:flex; flex-direction:column; gap:10px;
+    scroll-behavior:smooth;
+  }
+  .chat-log::-webkit-scrollbar{width:6px;}
+  .chat-log::-webkit-scrollbar-thumb{background:var(--line); border-radius:10px;}
+
+  .msg-row{display:flex; gap:8px; max-width:88%;}
+  .msg-row.bot{align-self:flex-start;}
+  .msg-row.bot.wide{max-width:97%;}
+  .msg-row.user{align-self:flex-end; flex-direction:row-reverse; max-width:80%;}
+  .bubble{ padding:10px 13px; border-radius:16px; font-size:13.6px; line-height:1.55; white-space:pre-wrap; }
+  .msg-row.bot .bubble{background:var(--bubble-bot); border:1px solid var(--line); border-bottom-left-radius:5px; color:var(--ink);}
+  .msg-row.user .bubble{background:var(--bubble-user); color:#3A2306; border-bottom-right-radius:5px; font-weight:500;}
+  .msg-row.bot .bubble.escalate{background:var(--danger-soft); border-color:#eec6c6;}
+  .mini-ava{width:22px;height:22px;border-radius:50%;background:var(--brand); flex:none; margin-top:2px;
+    display:flex;align-items:center;justify-content:center;font-size:11px;}
+
+  .typing{display:flex; gap:4px; padding:12px 14px;}
+  .typing span{width:6px;height:6px;background:var(--ink-soft); border-radius:50%; opacity:.5; animation:blink 1.1s infinite;}
+  .typing span:nth-child(2){animation-delay:.18s;} .typing span:nth-child(3){animation-delay:.36s;}
+  @keyframes blink{0%,80%,100%{opacity:.25; transform:translateY(0);} 40%{opacity:.9; transform:translateY(-2px);}}
+
+  .chips{display:flex; flex-wrap:wrap; gap:7px; padding:2px 6px 4px 30px;}
+  .chip{
+    font-size:12.5px; background:var(--accent-soft); color:#7A4B12; border:1px solid #f0d3a3;
+    padding:7px 13px; border-radius:100px; cursor:pointer; transition:.15s; font-weight:600;
+  }
+  .chip:hover{background:var(--accent); color:#fff; transform:translateY(-1px);}
+  .chip.confirm{background:var(--brand); color:#fff; border-color:var(--brand-dark);}
+  .chip.confirm:hover{background:var(--brand-dark);}
+
+  .composer{ display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+  .composer input{
+    flex:1; border:1px solid var(--line); border-radius:100px; padding:11px 16px; font-size:13.6px;
+    font-family:inherit; background:#FBFCF9; outline:none; color:var(--ink);
+  }
+  .composer input:focus{border-color:var(--brand);}
+  .composer button{
+    background:var(--brand); color:#fff; border:none; width:44px; height:44px; border-radius:50%;
+    cursor:pointer; flex:none; font-size:16px; transition:.15s;
+  }
+  .composer button:hover{background:var(--brand-dark);}
+  .hint{font-family:'IBM Plex Mono', monospace; font-size:10.8px; color:var(--ink-soft); margin-top:9px; padding:0 4px; line-height:1.6;}
+  .hint b{color:var(--brand);}
+
+  .dash{padding:20px 22px 24px;}
+  .dash-title{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .dash-title h2{font-family:'Fraunces',serif; font-size:19px; margin:0; font-weight:600;}
+  .live-badge{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--brand); background:#E7F3EC;
+    padding:5px 10px; border-radius:100px; display:flex; align-items:center; gap:5px; font-weight:500;
+  }
+  .live-badge i{width:6px;height:6px;border-radius:50%;background:var(--brand); animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:.35;}}
+
+  .section-label{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin:22px 0 10px; display:flex; align-items:center; gap:8px;
+  }
+  .section-label:first-of-type{margin-top:0;}
+  .section-label::after{content:''; flex:1; height:1px; background:var(--line);}
+
+  .price-table{width:100%; border-collapse:collapse; font-size:13.2px;}
+  .price-table td{padding:8px 6px; border-bottom:1px dashed var(--line);}
+  .price-table td:last-child{text-align:right; font-family:'IBM Plex Mono',monospace; font-weight:500; color:var(--brand-dark);}
+  .price-table tr:last-child td{border-bottom:none;}
+
+  /* calendar widget (shared: booking widget in chat + dashboard viewer) */
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .cal-label{font-size:12.6px; font-weight:700; color:var(--brand-dark); font-family:'IBM Plex Mono',monospace;}
+  .cal-nav-btn{
+    width:24px; height:24px; border-radius:50%; border:1px solid var(--line); background:#fff;
+    color:var(--ink-soft); cursor:pointer; font-size:13px; line-height:1;
+  }
+  .cal-nav-btn:disabled{opacity:.3; cursor:not-allowed;}
+  .cal-nav-btn:not(:disabled):hover{border-color:var(--brand); color:var(--brand);}
+  .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:4px;}
+  .cal-weekdays span{text-align:center; font-size:10px; color:var(--ink-soft); font-weight:600;}
+  .cal-days{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .cal-day{
+    position:relative; aspect-ratio:1; border:1px solid transparent; border-radius:8px; background:#FBFCF9;
+    font-size:11.3px; font-family:'Plus Jakarta Sans',sans-serif; color:var(--ink); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:.15s;
+  }
+  .cal-day.blank{background:transparent; cursor:default;}
+  .cal-day:not(.blank):not(.disabled):hover{border-color:var(--brand); background:var(--accent-soft);}
+  .cal-day.disabled{opacity:.3; cursor:not-allowed; background:transparent;}
+  .cal-day.today{border-color:var(--brand); font-weight:700;}
+  .cal-day.selected{background:var(--brand); color:#fff; font-weight:700;}
+  .cal-dot{position:absolute; bottom:3px; width:4px; height:4px; border-radius:50%; background:var(--accent);}
+  .cal-day.selected .cal-dot{background:#fff;}
+  .cal-note{font-size:10.5px; color:var(--ink-soft); margin-top:8px; line-height:1.5;}
+
+  .day-slots-title{font-size:12.6px; font-weight:700; color:var(--brand-dark); margin-bottom:9px;}
+  .slot{
+    display:flex; justify-content:space-between; gap:6px; align-items:center; font-size:11.8px;
+    padding:8px 9px; border-radius:9px; margin-bottom:6px; border:1px dashed #cfd9c4; color:var(--ink-soft);
+    transition:.25s;
+  }
+  .slot:last-child{margin-bottom:0;}
+  .slot .t{font-family:'IBM Plex Mono',monospace; font-weight:500;}
+  .slot.booked{
+    background:#E7F3EC; border:1px solid #c6e2d1; color:var(--brand-dark); flex-direction:column; align-items:flex-start; gap:1px;
+  }
+  .slot.booked .t{color:var(--brand);}
+  .slot.booked .pet{font-weight:700; font-size:12.2px;}
+  .slot.booked .svc{font-size:10.8px; opacity:.8;}
+  .slot.empty-tag{font-style:italic; opacity:.75;}
+  .slot-flash{animation:flash 1.1s ease;}
+  @keyframes flash{
+    0%{box-shadow:0 0 0 0 rgba(242,166,90,.55); background:var(--accent-soft);}
+    100%{box-shadow:0 0 0 14px rgba(242,166,90,0); }
   }
 
-  body {
-    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
-    background: var(--bg-page);
-    color: var(--text-primary);
-    min-height: 100vh;
-    padding: 1.5rem 1rem 3rem;
+  .upcoming-item{
+    font-size:12.2px; padding:9px 11px; border-radius:10px; background:#FBFCF9; border:1px solid var(--line);
+    margin-bottom:7px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  }
+  .upcoming-item:last-child{margin-bottom:0;}
+  .u-date{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--brand); font-weight:600;}
+  .u-detail{color:var(--ink);}
+
+  .reminder-item, .handoff-item{
+    font-size:12.4px; padding:9px 11px; border-radius:10px; background:#FBFCF9; border:1px solid var(--line);
+    margin-bottom:7px; line-height:1.5;
+  }
+  .reminder-item:last-child, .handoff-item:last-child{margin-bottom:0;}
+  .handoff-item{background:var(--danger-soft); border-color:#eec6c6; border-left:3px solid var(--danger);}
+  .empty-state{font-size:12px; color:var(--ink-soft); font-style:italic; padding:6px 2px;}
+
+  .fly-dot{
+    position:fixed; width:12px; height:12px; border-radius:50%; background:var(--accent);
+    box-shadow:0 0 0 6px rgba(242,166,90,.28); pointer-events:none; z-index:9999;
+    transform:translate(-50%,-50%);
   }
 
-  .container { max-width: 720px; margin: 0 auto; }
-
-  /* HEADER */
-  .header { margin-bottom: 1.5rem; }
-  .header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
-  .header-icon { width: 40px; height: 40px; border-radius: var(--radius-md); background: #534AB7; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-  .header-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
-  .header-sub { font-size: 13px; color: var(--text-secondary); margin-left: 52px; }
-
-  /* SUMMARY */
-  .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
-  .metric { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 1rem 1rem 0.85rem; }
-  .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.03em; }
-  .metric-value { font-size: 20px; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
-  .metric-sub { font-size: 11px; color: var(--text-hint); margin-top: 4px; }
-
-  /* SECTION TITLE */
-  .section-title { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
-
-  /* DEBT CARDS */
-  .debt-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
-  .debt-card { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; cursor: pointer; transition: border-color 0.15s; user-select: none; }
-  .debt-card:hover { border-color: var(--border-hover); }
-  .debt-card.open { border-color: var(--border-hover); }
-
-  .card-row { display: flex; align-items: center; gap: 10px; }
-  .card-icon { width: 38px; height: 38px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .card-info { flex: 1; min-width: 0; }
-  .card-name { font-size: 15px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-type { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
-  .card-right { text-align: right; flex-shrink: 0; }
-  .card-amount { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-  .card-rate-label { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
-  .chevron { font-size: 10px; color: var(--text-hint); flex-shrink: 0; transition: transform 0.2s; margin-left: 4px; }
-  .debt-card.open .chevron { transform: rotate(180deg); }
-
-  .prog-wrap { margin-top: 10px; }
-  .prog-bg { height: 4px; background: var(--bg-secondary); border-radius: 99px; overflow: hidden; }
-  .prog-fill { height: 4px; border-radius: 99px; }
-  .prog-labels { display: flex; justify-content: space-between; margin-top: 4px; }
-  .prog-label { font-size: 11px; color: var(--text-hint); }
-
-  .detail-panel { display: none; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
-  .debt-card.open .detail-panel { display: block; }
-  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-  .detail-box { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; }
-  .detail-box-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
-  .detail-box-value { font-size: 15px; font-weight: 500; color: var(--text-primary); }
-  .detail-box-value.red { color: #C0392B; }
-  .detail-box-value.amber { color: #BA7517; }
-
-  .avl-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
-  .avl-bg { height: 6px; background: var(--bg-secondary); border-radius: 99px; overflow: hidden; }
-  .avl-fill { height: 6px; border-radius: 99px; background: #1D9E75; }
-
-  .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: middle; }
-  .badge-ok { background: #E1F5EE; color: #0F6E56; }
-  .badge-warn { background: #FAEEDA; color: #854F0B; }
-  .badge-danger { background: #FCEBEB; color: #A32D2D; }
-
-  /* CHART */
-  .chart-card { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
-  .chart-wrap { position: relative; width: 100%; height: 220px; }
-  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 12px; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); }
-  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-
-  /* EDIT NOTE */
-  .edit-note { background: var(--bg-primary); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-top: 1.5rem; }
-  .edit-note-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
-  .edit-note p { font-size: 12px; color: var(--text-secondary); line-height: 1.8; }
-  code { font-family: 'Courier New', monospace; background: var(--bg-secondary); padding: 1px 5px; border-radius: 4px; font-size: 12px; color: var(--text-primary); }
-
-  /* RESPONSIVE */
-  @media (max-width: 440px) {
-    .summary-grid { grid-template-columns: 1fr 1fr; }
-    .summary-grid .metric:last-child { grid-column: 1 / -1; }
-    .metric-value { font-size: 18px; }
-  }
-  @media (max-width: 360px) {
-    .summary-grid { grid-template-columns: 1fr; }
-    .summary-grid .metric:last-child { grid-column: auto; }
+  footer.note{
+    text-align:center; margin-top:26px; font-size:11.5px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;
   }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
 
-  <div class="header">
-    <div class="header-top">
-      <div class="header-icon">💸</div>
-      <div class="header-title">ปลดหนี้ ภายในปี 2570</div>
+  <header class="top">
+    <div>
+      <span class="eyebrow">MVP Demo · ทดลองใช้งานได้จริง</span>
+      <h1>ห้องทดลอง <span>AI Automation</span></h1>
+      <p class="sub">จำลองแชทลูกค้าฝั่งซ้าย → AI วิเคราะห์ ตอบ และจองคิว (เลือกวันที่จริงล่วงหน้าได้ถึง 6 เดือน) → อัปเดตแดชบอร์ดร้านฝั่งขวาแบบสด</p>
     </div>
-    <div class="header-sub">ติดตามหนี้ทั้งหมดของคุณในที่เดียว อัพเดท 29/06/2569</div>
+    <button class="reset-btn" onclick="resetDemo()">↺ รีเซ็ตเดโม</button>
+  </header>
+
+  <div class="grid">
+
+    <div class="card phone">
+      <div class="phone-head">
+        <div class="avatar">🐾</div>
+        <div class="info">
+          <b>แฮปปี้เฟอร์ เพ็ทกรูมมิ่ง</b>
+          <small><span class="dot-online"></span>AI ตอบอัตโนมัติ · ออนไลน์</small>
+        </div>
+      </div>
+
+      <div class="chat-log" id="chatLog"></div>
+
+      <div class="composer">
+        <input id="chatInput" type="text" placeholder="พิมพ์ข้อความเหมือนเป็นลูกค้า..." autocomplete="off">
+        <button id="sendBtn" aria-label="ส่ง">➤</button>
+      </div>
+      <div class="hint">ลองพิมพ์ดู: <b>"ราคาอาบน้ำ"</b> · <b>"จองคิว"</b> (แล้วเลือกวันที่ในปฏิทิน) · <b>"น้องหมาแพ้แชมพูตัวเก่า"</b></div>
+    </div>
+
+    <div class="card dash">
+      <div class="dash-title">
+        <h2>แดชบอร์ดร้าน (มุมมองเจ้าของ)</h2>
+        <span class="live-badge"><i></i>เชื่อมต่อสด</span>
+      </div>
+
+      <div class="section-label">เมนูราคา</div>
+      <table class="price-table" id="priceTable"></table>
+
+      <div class="section-label">ปฏิทินคิว</div>
+      <div id="calNav"></div>
+      <div class="cal-note">คลิกวันที่เพื่อดูคิวของวันนั้น · จุดสีส้มใต้ตัวเลข = มีคิวจองแล้ว · ปิดทุกวันจันทร์</div>
+
+      <div class="section-label">คิวของวันที่เลือก</div>
+      <div id="daySlots"></div>
+
+      <div class="section-label">คิวที่จองไว้ทั้งหมด</div>
+      <div id="upcomingList"></div>
+
+      <div class="section-label">แจ้งเตือนอัตโนมัติที่ตั้งไว้</div>
+      <div id="reminderList"></div>
+
+      <div class="section-label">ข้อความรอเจ้าของร้าน (AI ส่งต่อ)</div>
+      <div id="handoffList"></div>
+    </div>
+
   </div>
 
-  <div class="summary-grid" id="summaryGrid"></div>
-
-  <p class="section-title">รายการหนี้ทั้งหมด</p>
-  <div class="debt-list" id="debtList"></div>
-
-  <p class="section-title">สัดส่วนหนี้</p>
-  <div class="chart-card">
-    <div class="legend" id="chartLegend"></div>
-    <div class="chart-wrap"><canvas id="debtChart"></canvas></div>
-  </div>
-
-
-
+  <footer class="note">ระบบต้นแบบนี้จำลองการทำงานฝั่งหน้าบ้านเท่านั้น เพื่อสาธิตแนวทาง Flow ก่อนเชื่อมต่อ LINE OA / Calendar จริง</footer>
 </div>
 
 <script>
-// ============================================================
-//  ✏️  แก้ไขข้อมูลหนี้ของคุณที่นี่
-// ============================================================
-const debts = [
-  {
-    name:    'บัตรเครดิต UOB',    // ชื่อรายการ
-    type:    'บัตรเครดิต',           // ประเภท (แสดงใต้ชื่อ)
-    balance: 0,                  // ยอดหนี้คงเหลือ (บาท)
-    limit:   146900,                  // วงเงินทั้งหมด (บาท)
-    rate:    16,                     // อัตราดอกเบี้ย % ต่อปี
-    minPay:  0,                   // ยอดชำระขั้นต่ำต่อเดือน (บาท)
-    color:   '#534AB7',              // สีบนกราฟ (hex)
-    icon:    '💳',                   // อีโมจิไอคอน
-    iconBg:  '#EEEDFE',              // สีพื้นหลังไอคอน
-  },
-  {
-    name:    'สินเชื่อส่วนบุคคล SCB',
-    type:    'สินเชื่อส่วนบุคคล',
-    balance: 0,
-    limit:   50000,
-    rate:    33,
-    minPay:  0,
-    color:   '#0F6E56',
-    icon:    '🏦',
-    iconBg:  '#E1F5EE',
-  },
-  {
-    name:    'สินเชื่อส่วนบุคคล CIMB',
-    type:    'สินเชื่อส่วนบุคคล',
-    balance: 0,
-    limit:   140000,
-    rate:    24,
-    minPay:  0,
-    color:   '#185FA5',
-    icon:    '🏦',
-    iconBg:  '#E6F1FB',
-  },
-  {
-    name:    'สินเชื่อส่วนบุคคล UOB',
-    type:    'สินเชื่อส่วนบุคคล',
-    balance: 156000,
-    limit:   200000,
-    rate:    22.99,
-    minPay:  5640,
-    color:   '#D85A30',
-    icon:    '🏦',
-    iconBg:  '#FAECE7',
-  },
-  {
-    name:    'สินเชื่อส่วนบุคคล กรุงศรี',
-    type:    'สินเชื่อส่วนบุคคล',
-    balance: 167216,
-    limit:   193000,
-    rate:    22,
-    minPay:  5441,
-    color:   '#BA7517',
-    icon:    '🏦',
-    iconBg:  '#FAEEDA',
-  },
-];
-// ============================================================
-//  ⛔ ห้ามแก้ไขโค้ดด้านล่างนี้
-// ============================================================
+  // ---------- Date utilities ----------
+  function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+  function toISO(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+  function fromISO(iso){ const p = iso.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+  function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+  function sameDate(a,b){ return toISO(a) === toISO(b); }
+  function isClosedDay(d){ return d.getDay() === 1; } // ปิดทุกวันจันทร์
+  function nextOpenDay(d){ let x = new Date(d); while(isClosedDay(x)){ x = addDays(x,1); } return x; }
 
-function fmt(n) { return Math.round(n).toLocaleString('th-TH'); }
-function fmtK(n) { return n >= 10000 ? (n / 1000).toFixed(1) + 'K' : Math.round(n).toString(); }
+  const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const THAI_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const THAI_WEEK_SHORT = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  function formatThaiDate(d){ return d.getDate() + ' ' + THAI_MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear(); }
 
-const totalDebt    = debts.reduce((a, d) => a + d.balance, 0);
-const totalIntYear = debts.reduce((a, d) => a + d.balance * d.rate / 100, 0);
-const totalMinPay  = debts.reduce((a, d) => a + d.minPay, 0);
+  const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+  const MAX_DATE = new Date(TODAY); MAX_DATE.setMonth(MAX_DATE.getMonth() + 6);
 
-// --- Summary cards ---
-const summaryGrid = document.getElementById('summaryGrid');
-[
-  { label: 'ยอดหนี้รวม',             value: '฿' + fmt(totalDebt),    sub: 'ทุกรายการ' },
-  { label: 'ดอกเบี้ยปีละ (ประมาณ)', value: '฿' + fmt(totalIntYear), sub: 'ดอกเบี้ยรวม' },
-  { label: 'ยอดชำระขั้นต่ำ/เดือน',  value: '฿' + fmt(totalMinPay),  sub: 'รวมทุกรายการ' },
-].forEach(m => {
-  const el = document.createElement('div');
-  el.className = 'metric';
-  el.innerHTML = `<div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div><div class="metric-sub">${m.sub}</div>`;
-  summaryGrid.appendChild(el);
-});
+  // ---------- Shop data ----------
+  const SHOP_NAME = "แฮปปี้เฟอร์ เพ็ทกรูมมิ่ง";
+  const SERVICES = [
+    {id:'bath_s', name:'อาบน้ำ (สุนัข/แมวเล็ก)', price:250},
+    {id:'bath_l', name:'อาบน้ำ (สุนัขพันธุ์ใหญ่)', price:350},
+    {id:'bath_cut', name:'อาบน้ำ + ตัดขน', price:450},
+    {id:'nail', name:'ตัดเล็บ', price:100},
+    {id:'flea', name:'กำจัดเห็บหมัด', price:150},
+  ];
+  const TIME_SLOTS = ['10:00','12:00','14:00','16:00','17:30'];
+  const ESCALATE_WORDS = ['แพ้','บาดเจ็บ','ร้องเรียน','คืนเงิน','ตำหนิ','ฟ้อง','เจ็บ','แผล'];
+  const PRICE_WORDS = ['ราคา','เท่าไหร่','ค่าบริการ','โปรโมชั่น','โปร'];
+  const HOURS_WORDS = ['เปิด','ปิด','เวลา','กี่โมง'];
+  const BOOK_WORDS = ['จอง','คิว','ว่าง','นัด'];
+  const GREET_WORDS = ['สวัสดี','หวัดดี','ดีครับ','ดีค่ะ'];
 
-// --- Debt cards ---
-const list = document.getElementById('debtList');
-debts.forEach(d => {
-  const pct       = Math.round(d.balance / d.limit * 100);
-  const intYear   = Math.round(d.balance * d.rate / 100);
-  const intMonth  = Math.round(intYear / 12);
-  const avlAmt    = d.limit - d.balance;
-  const avlPct    = 100 - pct;
-  const badgeClass = d.rate >= 20 ? 'badge-danger' : d.rate >= 15 ? 'badge-warn' : 'badge-ok';
-  const badgeLabel = d.rate >= 20 ? 'ดอกเบี้ยสูงมาก' : d.rate >= 15 ? 'ดอกเบี้ยสูง' : 'ดอกเบี้ยต่ำ';
+  let bookings = [];
+  let bookingId = 1000;
+  let bookingState = null; // {step, service, date(ISO), time, petInfo}
+  let dashSelectedISO = toISO(TODAY);
+  let dashCalHandle = null;
 
-  const card = document.createElement('div');
-  card.className = 'debt-card';
-  card.innerHTML = `
-    <div class="card-row">
-      <div class="card-icon" style="background:${d.iconBg}">${d.icon}</div>
-      <div class="card-info">
-        <div class="card-name">${d.name}</div>
-        <div class="card-type">${d.type}</div>
-      </div>
-      <div class="card-right">
-        <div class="card-amount">฿${fmt(d.balance)}</div>
-        <div class="card-rate-label">${d.rate}% ต่อปี</div>
-      </div>
-      <span class="chevron">▼</span>
-    </div>
-    <div class="prog-wrap">
-      <div class="prog-bg"><div class="prog-fill" style="width:${pct}%;background:${d.color}"></div></div>
-      <div class="prog-labels">
-        <span class="prog-label">ใช้ไป ${pct}%</span>
-        <span class="prog-label">วงเงิน ฿${fmt(d.limit)}</span>
-      </div>
-    </div>
-    <div class="detail-panel">
-      <div class="detail-grid">
-        <div class="detail-box">
-          <div class="detail-box-label">ดอกเบี้ยต่อปี (ประมาณ)</div>
-          <div class="detail-box-value red">฿${fmt(intYear)}</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-box-label">ดอกเบี้ยต่อเดือน</div>
-          <div class="detail-box-value amber">฿${fmt(intMonth)}</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-box-label">อัตราดอกเบี้ยต่อปี</div>
-          <div class="detail-box-value">${d.rate}%</div>
-        </div>
-        <div class="detail-box">
-          <div class="detail-box-label">ยอดชำระขั้นต่ำ/เดือน</div>
-          <div class="detail-box-value">฿${fmt(d.minPay)}</div>
-        </div>
-      </div>
-      <div>
-        <div class="avl-label">
-          วงเงินคงเหลือ ฿${fmt(avlAmt)} (${avlPct}%)
-          <span class="badge ${badgeClass}">${badgeLabel}</span>
-        </div>
-        <div class="avl-bg"><div class="avl-fill" style="width:${avlPct}%"></div></div>
-      </div>
-    </div>
-  `;
-  card.addEventListener('click', () => card.classList.toggle('open'));
-  list.appendChild(card);
-});
+  // ---------- DOM refs ----------
+  const chatLog = document.getElementById('chatLog');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const priceTable = document.getElementById('priceTable');
 
-// --- Chart legend ---
-const legend = document.getElementById('chartLegend');
-debts.forEach(d => {
-  legend.innerHTML += `
-    <span class="legend-item">
-      <span class="legend-dot" style="background:${d.color}"></span>
-      ${d.name.split(' ').slice(0, 2).join(' ')} ฿${fmtK(d.balance)}
-    </span>`;
-});
+  function renderPriceTable(){
+    priceTable.innerHTML = SERVICES.map(s => `<tr><td>${s.name}</td><td>฿${s.price}</td></tr>`).join('');
+  }
 
-// --- Doughnut chart ---
-new Chart(document.getElementById('debtChart'), {
-  type: 'doughnut',
-  data: {
-    labels: debts.map(d => d.name),
-    datasets: [{
-      data: debts.map(d => d.balance),
-      backgroundColor: debts.map(d => d.color),
-      borderWidth: 2,
-      borderColor: 'transparent',
-      hoverOffset: 8,
-    }],
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '65%',
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: ctx => ` ฿${fmt(ctx.raw)}  (${Math.round(ctx.raw / totalDebt * 100)}%)`,
-        },
-      },
-    },
-  },
-});
+  // ---------- Generic calendar widget ----------
+  function mountCalendar(container, opts){
+    let start = opts.initialView || opts.min || TODAY;
+    let viewYear = start.getFullYear();
+    let viewMonth = start.getMonth();
+    let selectedISO = opts.selectedISO || null;
+
+    function inRange(d){ return d >= opts.min && d <= opts.max; }
+    function canGoPrev(){ const prevEnd = new Date(viewYear, viewMonth, 0); return prevEnd >= opts.min; }
+    function canGoNext(){ const nextStart = new Date(viewYear, viewMonth+1, 1); return nextStart <= opts.max; }
+
+    function render(){
+      const firstDay = new Date(viewYear, viewMonth, 1);
+      const startWeekday = firstDay.getDay();
+      const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+
+      let cells = '';
+      for(let i=0;i<startWeekday;i++){ cells += '<span class="cal-day blank"></span>'; }
+      for(let day=1; day<=daysInMonth; day++){
+        const d = new Date(viewYear, viewMonth, day);
+        const iso = toISO(d);
+        const disabled = !inRange(d) || (opts.disableFn && opts.disableFn(d));
+        const isToday = sameDate(d, TODAY);
+        const isSelected = selectedISO === iso;
+        const mark = opts.markFn ? opts.markFn(iso) : 0;
+        cells += '<button type="button" class="cal-day' + (disabled?' disabled':'') + (isToday?' today':'') + (isSelected?' selected':'') +
+          '" data-iso="' + iso + '" ' + (disabled?'disabled':'') + '>' + day + (mark>0?'<i class="cal-dot"></i>':'') + '</button>';
+      }
+
+      container.innerHTML =
+        '<div class="cal-head">' +
+          '<button type="button" class="cal-nav-btn" data-nav="prev" ' + (canGoPrev()?'':'disabled') + '>‹</button>' +
+          '<span class="cal-label">' + THAI_MONTHS[viewMonth] + ' ' + viewYear + '</span>' +
+          '<button type="button" class="cal-nav-btn" data-nav="next" ' + (canGoNext()?'':'disabled') + '>›</button>' +
+        '</div>' +
+        '<div class="cal-weekdays">' + THAI_WEEK_SHORT.map(w => '<span>'+w+'</span>').join('') + '</div>' +
+        '<div class="cal-days">' + cells + '</div>';
+
+      container.querySelectorAll('.cal-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if(btn.dataset.nav === 'prev'){ viewMonth--; if(viewMonth<0){ viewMonth=11; viewYear--; } }
+          else { viewMonth++; if(viewMonth>11){ viewMonth=0; viewYear++; } }
+          render();
+        });
+      });
+
+      container.querySelectorAll('.cal-day:not(.blank):not(.disabled)').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const iso = btn.dataset.iso;
+          selectedISO = iso;
+          if(opts.lockAfterSelect){
+            container.querySelectorAll('.cal-day').forEach(b => b.disabled = true);
+            btn.classList.add('selected');
+            container.style.opacity = '.6';
+          }
+          if(opts.onSelect) opts.onSelect(fromISO(iso));
+          if(opts.mode === 'view') render();
+        });
+      });
+    }
+
+    render();
+    return {
+      refresh(){ render(); },
+      setSelected(iso){ selectedISO = iso; render(); }
+    };
+  }
+
+  // ---------- Dashboard rendering ----------
+  function slotRowId(iso, t){ return 'dslot-' + iso + '-' + t.replace(':',''); }
+
+  function renderDaySlots(){
+    const iso = dashSelectedISO;
+    const d = fromISO(iso);
+    const closed = isClosedDay(d);
+    let html = '<div class="day-slots-title">' + formatThaiDate(d) + (closed ? ' · ร้านปิด (วันจันทร์)' : '') + '</div>';
+    if(closed){
+      html += '<div class="empty-state">ร้านปิดวันจันทร์ค่ะ ไม่มีคิวในวันนี้</div>';
+    } else {
+      html += TIME_SLOTS.map(t => {
+        const b = bookings.find(bk => bk.date === iso && bk.time === t);
+        const rid = slotRowId(iso, t);
+        if(b){
+          return '<div class="slot booked" id="' + rid + '"><div class="t">' + t + ' น.</div><div class="pet">' + b.pet + '</div><div class="svc">' + b.service + (b.phone ? ' · 📞 ' + b.phone : '') + '</div></div>';
+        }
+        return '<div class="slot" id="' + rid + '"><span class="t">' + t + ' น.</span><span class="empty-tag">ว่าง</span></div>';
+      }).join('');
+    }
+    document.getElementById('daySlots').innerHTML = html;
+  }
+
+  function renderUpcomingList(){
+    const list = document.getElementById('upcomingList');
+    const upcoming = bookings.slice().sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+    if(upcoming.length === 0){ list.innerHTML = '<div class="empty-state">ยังไม่มีคิวที่จอง</div>'; return; }
+    list.innerHTML = upcoming.map(b => {
+      const d = fromISO(b.date);
+      return '<div class="upcoming-item"><div class="u-date">' + formatThaiDate(d) + ' · ' + b.time + ' น.</div><div class="u-detail"><b>' + escapeHtml(b.pet) + '</b> — ' + b.service + (b.phone ? ' <span style="opacity:.65">· 📞 ' + escapeHtml(b.phone) + '</span>' : '') + '</div></div>';
+    }).join('');
+  }
+
+  function markFn(iso){ return bookings.filter(b => b.date === iso).length; }
+
+  function renderDashboardAll(){
+    renderDaySlots();
+    renderUpcomingList();
+    if(dashCalHandle) dashCalHandle.refresh();
+  }
+
+  function addReminder(text){
+    const wrap = document.getElementById('reminderList');
+    if(wrap.querySelector('.empty-state')) wrap.innerHTML = '';
+    const el = document.createElement('div');
+    el.className = 'reminder-item';
+    el.textContent = '🔔 ' + text;
+    wrap.prepend(el);
+  }
+
+  function addHandoff(text){
+    const wrap = document.getElementById('handoffList');
+    if(wrap.querySelector('.empty-state')) wrap.innerHTML = '';
+    const el = document.createElement('div');
+    el.className = 'handoff-item';
+    el.innerHTML = '<b>ต้องการเจ้าของร้าน:</b> "' + escapeHtml(text) + '"';
+    wrap.prepend(el);
+  }
+
+  // ---------- Chat rendering ----------
+  function scrollBottom(){ chatLog.scrollTop = chatLog.scrollHeight; }
+
+  function addUserMsg(text){
+    const row = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML = '<div class="bubble">' + escapeHtml(text) + '</div>';
+    chatLog.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function addBotMsg(text, opts){
+    opts = opts || {};
+    const row = document.createElement('div');
+    row.className = 'msg-row bot' + (opts.wide ? ' wide' : '');
+    row.innerHTML = '<div class="mini-ava">🐾</div><div class="bubble ' + (opts.escalate?'escalate':'') + '">' + text + '</div>';
+    chatLog.appendChild(row);
+    scrollBottom();
+    return row;
+  }
+
+  function addChips(options){
+    const row = document.createElement('div');
+    row.className = 'chips';
+    row.innerHTML = options.map(o => '<button class="chip ' + (o.confirm?'confirm':'') + '">' + o.label + '</button>').join('');
+    [...row.children].forEach((btn, i) => btn.onclick = () => {
+      row.querySelectorAll('.chip').forEach(c => c.disabled = true);
+      row.style.opacity = '.45'; row.style.pointerEvents = 'none';
+      handleUserAction(options[i].value, btn);
+    });
+    chatLog.appendChild(row);
+    scrollBottom();
+  }
+
+  function addDatePicker(){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-row bot wide';
+    wrap.innerHTML = '<div class="mini-ava">🐾</div><div class="bubble" style="padding:11px 11px 4px; min-width:236px;"><div id="bookCal"></div><div class="cal-note" style="margin-top:6px;">เลือกได้ล่วงหน้าสูงสุด 6 เดือน · ปิดทุกวันจันทร์</div></div>';
+    chatLog.appendChild(wrap);
+    scrollBottom();
+    mountCalendar(document.getElementById('bookCal'), {
+      min: TODAY,
+      max: MAX_DATE,
+      mode: 'pick',
+      lockAfterSelect: true,
+      disableFn: (d) => isClosedDay(d),
+      onSelect: (d) => {
+        const label = formatThaiDate(d);
+        addUserMsg(label);
+        proceedAfterDateSelect(toISO(d), label);
+      }
+    });
+  }
+
+  function showTyping(callback){
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+    row.innerHTML = '<div class="mini-ava">🐾</div><div class="bubble typing"><span></span><span></span><span></span></div>';
+    chatLog.appendChild(row);
+    scrollBottom();
+    setTimeout(() => { row.remove(); callback(); }, 550 + Math.random()*400);
+  }
+
+  function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function flyDot(fromEl, toEl){
+    if(!fromEl || !toEl) return;
+    const dot = document.createElement('div');
+    dot.className = 'fly-dot';
+    document.body.appendChild(dot);
+    const r1 = fromEl.getBoundingClientRect();
+    const r2 = toEl.getBoundingClientRect();
+    dot.style.left = (r1.left + r1.width/2) + 'px';
+    dot.style.top = (r1.top + r1.height/2) + 'px';
+    requestAnimationFrame(() => {
+      dot.style.transition = 'all .85s cubic-bezier(.4,0,.2,1)';
+      dot.style.left = (r2.left + r2.width/2) + 'px';
+      dot.style.top = (r2.top + r2.height/2) + 'px';
+      dot.style.opacity = '.15';
+      dot.style.transform = 'translate(-50%,-50%) scale(.4)';
+    });
+    setTimeout(() => {
+      dot.remove();
+      toEl.classList.add('slot-flash');
+      setTimeout(() => toEl.classList.remove('slot-flash'), 1100);
+    }, 900);
+  }
+
+  // ---------- Booking flow ----------
+  function startBooking(){
+    bookingState = {step:'service'};
+    showTyping(() => {
+      addBotMsg('ได้เลยค่ะ สนใจบริการไหนดีคะ 🐶🐱');
+      addChips(SERVICES.map(s => ({label: s.name + ' · ฿' + s.price, value: s.id})));
+    });
+  }
+
+  function proceedAfterDateSelect(iso, label){
+    bookingState.date = iso;
+    bookingState.step = 'time';
+    showTyping(() => {
+      const free = TIME_SLOTS.filter(t => !bookings.find(b => b.date===iso && b.time===t));
+      if(free.length === 0){
+        addBotMsg('ขอโทษด้วยค่ะ วันที่ ' + label + ' คิวเต็มหมดแล้ว 🙏 เลือกวันอื่นได้เลยนะคะ');
+        bookingState.step = 'day';
+        addDatePicker();
+        return;
+      }
+      addBotMsg('วันที่ ' + label + ' ว่างช่วงเวลานี้ค่ะ เลือกได้เลย 👇');
+      addChips(free.map(t => ({label:t + ' น.', value:t})));
+    });
+  }
+
+  function handleUserAction(value, chipEl){
+    if(['price','hours','book'].includes(value) && !bookingState){
+      addUserMsg(chipEl.textContent);
+      if(value === 'price') return handleUserMessage('ราคา');
+      if(value === 'hours') return handleUserMessage('เวลาเปิด');
+      if(value === 'book') return handleUserMessage('จองคิว');
+    }
+
+    addUserMsg(chipEl.textContent);
+    if(!bookingState) return;
+
+    if(bookingState.step === 'service'){
+      const svc = SERVICES.find(s => s.id === value);
+      bookingState.service = svc;
+      bookingState.step = 'day';
+      showTyping(() => {
+        addBotMsg('เลือกวันที่สะดวกได้เลยค่ะ 📅', {wide:true});
+        addDatePicker();
+      });
+      return;
+    }
+
+    if(bookingState.step === 'time'){
+      bookingState.time = value;
+      bookingState.step = 'petname';
+      showTyping(() => {
+        addBotMsg('รบกวนพิมพ์ <b>ชื่อน้อง</b> สักหน่อยนะคะ 🐾<br><span style="font-size:11px;opacity:.7">(พิมพ์ในช่องด้านล่างแล้วกดส่งได้เลยค่ะ)</span>');
+      });
+      return;
+    }
+
+    if(bookingState.step === 'confirm'){
+      if(value === 'confirm'){
+        finalizeBooking(chipEl);
+      } else {
+        bookingState = null;
+        showTyping(() => addBotMsg('ยกเลิกการจองแล้วค่ะ มีอะไรให้ช่วยเพิ่มไหมคะ 😊'));
+      }
+      return;
+    }
+  }
+
+  function finalizeBooking(triggerEl){
+    const b = bookingState;
+    const id = ++bookingId;
+    bookings.push({date:b.date, time:b.time, pet:b.petName, phone:b.phone, service:b.service.name});
+
+    showTyping(() => {
+      const dateLabel = formatThaiDate(fromISO(b.date));
+      const botRow = addBotMsg(
+        'จองสำเร็จแล้วค่ะ ✅<br>' +
+        '<b>รหัสคิว:</b> #' + id + '<br>' +
+        '<b>บริการ:</b> ' + b.service.name + '<br>' +
+        '<b>วันเวลา:</b> ' + dateLabel + ' เวลา ' + b.time + ' น.<br>' +
+        '<b>ชื่อน้อง:</b> ' + escapeHtml(b.petName) + '<br>' +
+        '<b>เบอร์โทร:</b> ' + escapeHtml(b.phone) + '<br>' +
+        '<b>ราคา:</b> ฿' + b.service.price + '<br><br>' +
+        'ระบบตั้งแจ้งเตือนก่อนถึงนัดให้อัตโนมัติแล้วค่ะ 🔔'
+      );
+
+      dashSelectedISO = b.date;
+      if(dashCalHandle) dashCalHandle.setSelected(b.date);
+      renderDashboardAll();
+
+      const target = document.getElementById(slotRowId(b.date, b.time));
+      flyDot(triggerEl || botRow, target);
+
+      addReminder('แจ้งเตือนคิว #' + id + ' — ' + b.petName + ' (' + b.phone + ') ก่อนถึงนัด (' + dateLabel + ' ' + b.time + ' น.)');
+      addChips([{label:'จองคิวอีกครั้ง', value:'book'}, {label:'ดูราคาบริการ', value:'price'}]);
+      bookingState = null;
+    });
+  }
+
+  // ---------- Intent handling ----------
+  function containsAny(text, words){ return words.some(w => text.indexOf(w) !== -1); }
+
+  function handleUserMessage(text){
+    const row = addUserMsg(text);
+
+    if(bookingState && bookingState.step === 'petname'){
+      const name = text.trim();
+      if(name.length < 1){
+        showTyping(() => addBotMsg('ขอชื่อน้องด้วยนะคะ 🐾 พิมพ์แล้วกดส่งได้เลยค่ะ'));
+        return;
+      }
+      bookingState.petName = name;
+      bookingState.step = 'phone';
+      showTyping(() => addBotMsg('ขอเบอร์โทรติดต่อด้วยค่ะ 📱 (เผื่อร้านต้องโทรแจ้งเตือนหรือสอบถามเพิ่มเติม)'));
+      return;
+    }
+
+    if(bookingState && bookingState.step === 'phone'){
+      const digits = text.replace(/[^0-9]/g, '');
+      if(digits.length < 9 || digits.length > 10){
+        showTyping(() => addBotMsg('เบอร์โทรดูไม่ค่อยถูกต้องนะคะ 🙏 รบกวนพิมพ์เบอร์ 9-10 หลักอีกครั้งค่ะ'));
+        return;
+      }
+      bookingState.phone = text.trim();
+      bookingState.step = 'confirm';
+      showTyping(() => {
+        const svc = bookingState.service, dateLabel = formatThaiDate(fromISO(bookingState.date));
+        addBotMsg(
+          'ขอทวนรายละเอียดนะคะ 📝<br>' +
+          'บริการ: ' + svc.name + ' (฿' + svc.price + ')<br>' +
+          'วันเวลา: ' + dateLabel + ' ' + bookingState.time + ' น.<br>' +
+          'ชื่อน้อง: ' + escapeHtml(bookingState.petName) + '<br>' +
+          'เบอร์โทร: ' + escapeHtml(bookingState.phone) + '<br><br>ยืนยันการจองเลยไหมคะ?'
+        );
+        addChips([{label:'✅ ยืนยันการจอง', value:'confirm'}, {label:'ยกเลิก', value:'cancel'}]);
+      });
+      return;
+    }
+
+    if(containsAny(text, ESCALATE_WORDS)){
+      showTyping(() => {
+        addBotMsg('ขอโทษด้วยนะคะ 🙏 เรื่องนี้ขอส่งต่อให้เจ้าของร้านดูแลโดยตรงเพื่อความชัวร์ค่ะ รอสักครู่นะคะ', {escalate:true});
+        addHandoff(text);
+      });
+      return;
+    }
+
+    if(containsAny(text, PRICE_WORDS)){
+      showTyping(() => {
+        const list = SERVICES.map(s => '• ' + s.name + ' — ฿' + s.price).join('<br>');
+        addBotMsg('เมนูราคาค่ะ 💈<br>' + list);
+        addChips([{label:'จองคิวเลย', value:'book'}]);
+      });
+      return;
+    }
+
+    if(containsAny(text, HOURS_WORDS)){
+      showTyping(() => addBotMsg('ร้านเปิดทุกวัน 09:00 - 18:00 น. ค่ะ (หยุดทุกวันจันทร์) 🕘'));
+      return;
+    }
+
+    if(containsAny(text, BOOK_WORDS)){
+      startBooking();
+      return;
+    }
+
+    if(containsAny(text, GREET_WORDS)){
+      showTyping(() => {
+        addBotMsg('สวัสดีค่ะ ยินดีต้อนรับสู่ ' + SHOP_NAME + ' ค่ะ 🐾 สนใจสอบถามอะไรดีคะ');
+        addChips([{label:'ดูราคา', value:'price'},{label:'เวลาเปิด-ปิด', value:'hours'},{label:'จองคิว', value:'book'}]);
+      });
+      return;
+    }
+
+    showTyping(() => {
+      addBotMsg('ขอโทษค่ะ อันนี้ AI ยังไม่แน่ใจ 🤔 ขอส่งต่อให้เจ้าของร้านตอบเพิ่มเติมนะคะ', {escalate:true});
+      addHandoff(text);
+    });
+  }
+
+  // ---------- Composer events ----------
+  function sendFromInput(){
+    const val = chatInput.value.trim();
+    if(!val) return;
+    chatInput.value = '';
+    handleUserMessage(val);
+  }
+  sendBtn.addEventListener('click', sendFromInput);
+  chatInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendFromInput(); });
+
+  // ---------- Init / reset ----------
+  function seedBookings(){
+    const d1 = nextOpenDay(TODAY);
+    const d2 = nextOpenDay(addDays(d1, 1));
+    const d3 = nextOpenDay(addDays(d2, 1));
+    bookings = [
+      {date: toISO(d1), time:'10:00', pet:'น้องบราวนี่', phone:'081-234-5678', service:'อาบน้ำ + ตัดขน'},
+      {date: toISO(d1), time:'14:00', pet:'เจ้าโมจิ', phone:'089-876-5432', service:'อาบน้ำ (แมวเล็ก)'},
+      {date: toISO(d2), time:'12:00', pet:'น้องพุดดิ้ง', phone:'062-111-2233', service:'ตัดเล็บ'},
+    ];
+    void d3;
+  }
+
+  function initDemo(){
+    chatLog.innerHTML = '';
+    bookingState = null;
+    bookingId = 1000;
+    dashSelectedISO = toISO(TODAY);
+    seedBookings();
+
+    document.getElementById('reminderList').innerHTML = '<div class="empty-state">ยังไม่มีการตั้งแจ้งเตือน</div>';
+    document.getElementById('handoffList').innerHTML = '<div class="empty-state">ไม่มีข้อความรอดำเนินการ</div>';
+
+    renderPriceTable();
+    dashCalHandle = mountCalendar(document.getElementById('calNav'), {
+      min: TODAY,
+      max: MAX_DATE,
+      mode: 'view',
+      selectedISO: dashSelectedISO,
+      markFn: markFn,
+      onSelect: (d) => { dashSelectedISO = toISO(d); renderDaySlots(); }
+    });
+    renderDaySlots();
+    renderUpcomingList();
+
+    showTyping(() => {
+      addBotMsg('สวัสดีค่ะ ยินดีต้อนรับสู่ ' + SHOP_NAME + ' ค่ะ 🐾 สนใจสอบถามอะไรดีคะ');
+      addChips([{label:'ดูราคา', value:'price'},{label:'เวลาเปิด-ปิด', value:'hours'},{label:'จองคิว', value:'book'}]);
+    });
+  }
+  function resetDemo(){ initDemo(); }
+
+  initDemo();
 </script>
 </body>
 </html>
