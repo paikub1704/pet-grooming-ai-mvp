@@ -306,14 +306,24 @@
   const MAX_DATE = new Date(TODAY); MAX_DATE.setMonth(MAX_DATE.getMonth() + 6);
 
   // ---------- Shop data ----------
+  // =========================================================
+  // Google Sheets / Apps Script configuration
+  // 1) Deploy Apps Script as Web app
+  // 2) Paste the Web App URL below
+  // 3) Leave blank to use demo/local data only
+  // =========================================================
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwUm0ReX4ouzyvMcKYkDsDuKJbdU9pWrN_9ajgylpkDKgaP3i_BEPYNvi4y6tWresC9rg/exec';
+  const USE_GOOGLE_SHEETS = API_URL.trim().length > 0;
+
   const SHOP_NAME = "แฮปปี้เฟอร์ เพ็ทกรูมมิ่ง";
-  const SERVICES = [
+  let SERVICES = [
     {id:'bath_s', name:'อาบน้ำ (สุนัข/แมวเล็ก)', price:250},
     {id:'bath_l', name:'อาบน้ำ (สุนัขพันธุ์ใหญ่)', price:350},
     {id:'bath_cut', name:'อาบน้ำ + ตัดขน', price:450},
     {id:'nail', name:'ตัดเล็บ', price:100},
     {id:'flea', name:'กำจัดเห็บหมัด', price:150},
   ];
+  const DEFAULT_SERVICES = SERVICES.map(s => ({...s}));
   const TIME_SLOTS = ['10:00','12:00','14:00','16:00','17:30'];
   const ESCALATE_WORDS = ['แพ้','บาดเจ็บ','ร้องเรียน','คืนเงิน','ตำหนิ','ฟ้อง','เจ็บ','แผล'];
   const PRICE_WORDS = ['ราคา','เท่าไหร่','ค่าบริการ','โปรโมชั่น','โปร'];
@@ -323,6 +333,44 @@
 
   let bookings = [];
   let bookingId = 1000;
+  let dataSource = USE_GOOGLE_SHEETS ? 'Google Sheets' : 'Demo / Local';
+
+  async function apiGet(action){
+    if(!USE_GOOGLE_SHEETS) return null;
+    try{
+      const res = await fetch(API_URL + '?action=' + encodeURIComponent(action), {cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    }catch(err){
+      console.warn('API GET failed:', err);
+      return null;
+    }
+  }
+
+  async function apiPost(action, payload){
+    if(!USE_GOOGLE_SHEETS) return null;
+    try{
+      const body = JSON.stringify({action, ...payload});
+      const res = await fetch(API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body
+      });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    }catch(err){
+      console.warn('API POST failed:', err);
+      return null;
+    }
+  }
+
+  function setConnectionStatus(text, online){
+    const badge = document.querySelector('.live-badge');
+    if(!badge) return;
+    badge.innerHTML = '<i></i>' + escapeHtml(text);
+    badge.style.color = online ? 'var(--brand)' : 'var(--danger)';
+    badge.style.background = online ? '#E7F3EC' : 'var(--danger-soft)';
+  }
   let bookingState = null; // {step, service, date(ISO), time, petInfo}
   let dashSelectedISO = toISO(TODAY);
   let dashCalHandle = null;
@@ -620,35 +668,98 @@
     }
   }
 
-  function finalizeBooking(triggerEl){
+  async function finalizeBooking(triggerEl){
     const b = bookingState;
     const id = ++bookingId;
-    bookings.push({date:b.date, time:b.time, pet:b.petName, phone:b.phone, service:b.service.name});
+    const localBooking = {
+      id, date:b.date, time:b.time, pet:b.petName, phone:b.phone,
+      service:b.service.name, serviceId:b.service.id, price:b.service.price, status:'CONFIRMED'
+    };
 
-    showTyping(() => {
+    // Optimistic UI: update screen immediately
+    bookings.push(localBooking);
+    dashSelectedISO = b.date;
+    if(dashCalHandle) dashCalHandle.setSelected(b.date);
+    renderDashboardAll();
+
+    const target = document.getElementById(slotRowId(b.date, b.time));
+    if(target) flyDot(triggerEl, target);
+
+    showTyping(async () => {
       const dateLabel = formatThaiDate(fromISO(b.date));
-      const botRow = addBotMsg(
-        'จองสำเร็จแล้วค่ะ ✅<br>' +
-        '<b>รหัสคิว:</b> #' + id + '<br>' +
-        '<b>บริการ:</b> ' + b.service.name + '<br>' +
-        '<b>วันเวลา:</b> ' + dateLabel + ' เวลา ' + b.time + ' น.<br>' +
-        '<b>ชื่อน้อง:</b> ' + escapeHtml(b.petName) + '<br>' +
-        '<b>เบอร์โทร:</b> ' + escapeHtml(b.phone) + '<br>' +
-        '<b>ราคา:</b> ฿' + b.service.price + '<br><br>' +
-        'ระบบตั้งแจ้งเตือนก่อนถึงนัดให้อัตโนมัติแล้วค่ะ 🔔'
-      );
+      let saved = true;
 
-      dashSelectedISO = b.date;
-      if(dashCalHandle) dashCalHandle.setSelected(b.date);
-      renderDashboardAll();
+      if(USE_GOOGLE_SHEETS){
+        const result = await apiPost('createBooking', {
+          id: id, date:b.date, time:b.time, petName:b.petName, phone:b.phone,
+          serviceId:b.service.id, service:b.service.name, price:b.service.price, status:'CONFIRMED'
+        });
+        saved = !!(result && result.success);
+        if(!saved){
+          // Roll back optimistic record when the database write fails.
+          bookings = bookings.filter(x => x !== localBooking);
+          renderDashboardAll();
+        }
+      }
 
-      const target = document.getElementById(slotRowId(b.date, b.time));
-      flyDot(triggerEl || botRow, target);
-
-      addReminder('แจ้งเตือนคิว #' + id + ' — ' + b.petName + ' (' + b.phone + ') ก่อนถึงนัด (' + dateLabel + ' ' + b.time + ' น.)');
-      addChips([{label:'จองคิวอีกครั้ง', value:'book'}, {label:'ดูราคาบริการ', value:'price'}]);
+      if(saved){
+        addBotMsg(
+          'จองสำเร็จแล้วค่ะ ✅<br>' +
+          '<b>รหัสคิว:</b> #' + id + '<br>' +
+          '<b>บริการ:</b> ' + escapeHtml(b.service.name) + '<br>' +
+          '<b>วันเวลา:</b> ' + dateLabel + ' เวลา ' + b.time + ' น.<br>' +
+          '<b>ชื่อน้อง:</b> ' + escapeHtml(b.petName) + '<br>' +
+          '<b>เบอร์โทร:</b> ' + escapeHtml(b.phone) + '<br>' +
+          '<b>ราคา:</b> ฿' + b.service.price + '<br><br>' +
+          'บันทึกเข้าระบบแล้วค่ะ และตั้งแจ้งเตือนก่อนถึงนัดให้อัตโนมัติ 🔔'
+        );
+        addReminder('แจ้งเตือนคิว #' + id + ' — ' + b.petName + ' (' + b.phone + ') ก่อนถึงนัด (' + dateLabel + ' ' + b.time + ' น.)');
+        addChips([{label:'จองคิวอีกครั้ง', value:'book'}, {label:'ดูราคาบริการ', value:'price'}]);
+      }else{
+        addBotMsg('ขออภัยค่ะ ระบบบันทึกคิวลงฐานข้อมูลไม่สำเร็จ 🙏 กรุณาลองใหม่อีกครั้ง หรือติดต่อร้านโดยตรงค่ะ', {escalate:true});
+        addHandoff('บันทึกคิวไม่สำเร็จ: #' + id + ' ' + b.petName + ' ' + b.date + ' ' + b.time);
+      }
       bookingState = null;
     });
+  }
+
+  async function loadFromGoogleSheets(){
+    if(!USE_GOOGLE_SHEETS){
+      setConnectionStatus('Demo / Local', false);
+      return;
+    }
+
+    setConnectionStatus('กำลังเชื่อมต่อ…', false);
+    const result = await apiGet('bootstrap');
+    if(!result || !result.success){
+      setConnectionStatus('เชื่อมต่อไม่ได้ · ใช้ Demo', false);
+      return;
+    }
+
+    if(Array.isArray(result.services) && result.services.length){
+      SERVICES = result.services.map((x,i) => ({
+        id:String(x.id || ('svc_' + i)),
+        name:String(x.name || ''),
+        price:Number(x.price || 0)
+      }));
+      renderPriceTable();
+    }
+
+    if(Array.isArray(result.bookings)){
+      bookings = result.bookings.map((x,i) => ({
+        id:Number(x.id || (1000+i+1)),
+        date:String(x.date || ''), time:String(x.time || ''),
+        pet:String(x.petName || x.pet || ''), phone:String(x.phone || ''),
+        service:String(x.service || ''), serviceId:String(x.serviceId || ''),
+        price:Number(x.price || 0), status:String(x.status || 'CONFIRMED')
+      })).filter(x => x.date && x.time);
+      const maxId = bookings.reduce((m,x)=>Math.max(m, Number(x.id)||0),1000);
+      bookingId = maxId;
+    }
+
+    dataSource = 'Google Sheets';
+    setConnectionStatus('Google Sheets · Live', true);
+    renderDashboardAll();
   }
 
   // ---------- Intent handling ----------
@@ -755,11 +866,12 @@
     void d3;
   }
 
-  function initDemo(){
+  async function initDemo(){
     chatLog.innerHTML = '';
     bookingState = null;
     bookingId = 1000;
     dashSelectedISO = toISO(TODAY);
+    SERVICES = DEFAULT_SERVICES.map(s => ({...s}));
     seedBookings();
 
     document.getElementById('reminderList').innerHTML = '<div class="empty-state">ยังไม่มีการตั้งแจ้งเตือน</div>';
@@ -776,12 +888,16 @@
     });
     renderDaySlots();
     renderUpcomingList();
+    setConnectionStatus(USE_GOOGLE_SHEETS ? 'กำลังเชื่อมต่อ…' : 'Demo / Local', false);
 
     showTyping(() => {
       addBotMsg('สวัสดีค่ะ ยินดีต้อนรับสู่ ' + SHOP_NAME + ' ค่ะ 🐾 สนใจสอบถามอะไรดีคะ');
       addChips([{label:'ดูราคา', value:'price'},{label:'เวลาเปิด-ปิด', value:'hours'},{label:'จองคิว', value:'book'}]);
     });
+
+    await loadFromGoogleSheets();
   }
+
   function resetDemo(){ initDemo(); }
 
   initDemo();
